@@ -20,6 +20,19 @@
 #define LISTENQ 10
 #define ENDMESSAGE '\n'
 
+typedef struct{
+    int cfd;
+    int tft;
+    int reqState;
+    char buffer[MAXMESSAGE];
+    //clientreadsz
+    //servermsz
+    //serverwrittensz
+    //serverreadsz
+    //clientwrittensz
+}request_info;
+map<int, request_info*> RequestMap;
+
 // Imagine network events as a binary signal pulse. 
 // Edge triggered epoll only returns when an edge occurs, ie. transitioning from 0 to 1 or 1 to 0. 
 // Regardless for how long the state stays on 0 or 1.
@@ -36,40 +49,34 @@ int g_edge_triggered = 1;
 
 int open_listenfd(char *port)
 {   
-    struct addrinfo hints, *listp, *p;
-    int listenfd, optval=1;
-    
-    /* Get a list of potential server addresses */
-    memset(&hints, 0, sizeof(struct addrinfo));  
-    hints.ai_socktype = SOCK_STREAM;             /* Accept connect. */
-    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* …on any IP addr */
-    hints.ai_flags |= AI_NUMERICSERV;            /* …using port no. */
-    getaddrinfo(NULL, port, &hints, &listp);
-    
-    /* Walk the list for one that we can bind to */
-    for (p = listp; p; p = p->ai_next) {
-        /* Create a socket descriptor */
-        if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0)
-            continue;  /* Socket failed, try the next */
-        
-        /* Eliminates "Address already in use" error from bind */
-        setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval , sizeof(int));
-        
-        /* Bind the descriptor to the address */
-        if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
-            break; /* Success */
-        close(listenfd); /* Bind failed, try the next */
+    int listenfd;
+    int optval = 1;
+    struct sockaddr_in ip4addr;
+
+    ip4addr.sin_family = AF_INET;
+    ip4addr.sin_port = htons(atoi(port));
+    ip4addr.sin_addr.s_addr = INADDR_ANY;
+    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    {
+        perror("socket error");
+        exit(EXIT_FAILURE);
     }
-    /* Clean up */
-    freeaddrinfo(listp);
-    if (!p) /* No address worked */
-        return -1;
-    
-    /* Make it a listening socket ready to accept conn. requests */
-    if (listen(listenfd, LISTENQ) < 0) {
+    /* Eliminates "Address already in use" error from bind */
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval , sizeof(int));
+
+    if (bind(listenfd, (struct sockaddr*)&ip4addr, sizeof(struct sockaddr_in)) < 0) 
+    {
         close(listenfd);
-        return -1;
+        perror("bind error");
+        exit(EXIT_FAILURE);
     }
+    if (listen(listenfd, 100) < 0) 
+    {
+        close(listenfd);
+        perror("listen error");
+        exit(EXIT_FAILURE);
+    }
+
     return listenfd;
 }
 
