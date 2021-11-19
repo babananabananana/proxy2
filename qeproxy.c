@@ -32,7 +32,7 @@ typedef struct{
     //serverreadsz
     //clientwrittensz
 }request_info;
-map<int, request_info*> RequestMap;
+//map<int, request_info*> RequestMap;
 
 // Imagine network events as a binary signal pulse. 
 // Edge triggered epoll only returns when an edge occurs, ie. transitioning from 0 to 1 or 1 to 0. 
