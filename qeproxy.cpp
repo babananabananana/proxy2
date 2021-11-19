@@ -170,7 +170,7 @@ void handle_client_request(struct epoll_event *ev)
 void handle_new_connection(int epollfd, struct epoll_event *ev)
 {
 	struct sockaddr_in in_addr;
-	int addr_size = sizeof(in_addr);
+	socklen_t addr_size = sizeof(in_addr);
 	char hbuf[MAXLINE], sbuf[MAXLINE];
 
 	int connfd = accept(ev->data.fd, (struct sockaddr *)(&in_addr), &addr_size);
