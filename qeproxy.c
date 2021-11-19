@@ -19,6 +19,7 @@
 #define MAXLINE 25
 #define LISTENQ 10
 #define ENDMESSAGE '\n'
+#define MAXMESSAGE 4000
 
 typedef struct{
     int cfd;
