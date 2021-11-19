@@ -12,6 +12,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <map>
 
 
 
@@ -22,17 +23,18 @@
 #define MAXMESSAGE 4000
 
 typedef struct{
-    int cfd;
-    int tft;
-    int reqState;
-    char buffer[MAXMESSAGE];
-    //clientreadsz
-    //servermsz
-    //serverwrittensz
-    //serverreadsz
-    //clientwrittensz
+    int cfd; //the socket corresponding to the requesting client
+    int tft; //the socket corresponding to the connection to the Web server
+    int reqState; //the current state of the request (see Client Request States)
+    char buffer[MAXMESSAGE]; //the buffer to read into and write from
+    int clientreadsz; //the total number of bytes read from the client
+    int servermsz; //the total number of bytes to write to the server
+    int serverwrittensz; //the total number of bytes written to the server
+    int serverreadsz; //the total number of bytes read from the server
+    int clientwrittensz; //the total number of bytes written to the client
 }request_info;
-//map<int, request_info*> RequestMap;
+
+map<int, request_info*> RequestMap;
 
 // Imagine network events as a binary signal pulse. 
 // Edge triggered epoll only returns when an edge occurs, ie. transitioning from 0 to 1 or 1 to 0. 
