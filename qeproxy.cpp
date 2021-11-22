@@ -110,6 +110,8 @@ void echo_data(int fd, char *buff, int size)
 void handle_response(int fd, char *request, int size)
 {
 	echo_data(fd, request, size);
+//    RequestMap[]
+//SET SZ TO 0
 }
 
 void handle_client_request(struct epoll_event *ev)
@@ -122,14 +124,17 @@ void handle_client_request(struct epoll_event *ev)
 	 completely, as we are running in edge-triggered mode
 	 and won't get a notification again for the same data. 
 	 */
-	
+      /////
+      request_info* ri = RequestMap(ev->data, fd);
 	printf("Handling a client request\n");
 
 	int done = 0;
 	for(int i = 0; !done; i++)
 	{
-		int n = read_data(ev->data.fd, buff, MAXLINE-1);
-		if (!g_edge_triggered)
+        ////
+		int n = read_data(ev->data.fd, &(ri->buffer[ri->clientreadsz]), MAXLINE-1);
+		ri->clientreadsz += n;
+        if (!g_edge_triggered)
 		{
 			printf("Done & not edge_triggered\n");
 			done = 1;
@@ -141,6 +146,7 @@ void handle_client_request(struct epoll_event *ev)
 
 			if (i == 0) /* if we get 0 bytes the first time through, the socket has been closed */
 			{
+                ////CLEAN SPACE FROM MAP??
 				/* Closing the descriptor will make epoll remove it
 				from the set of descriptors which are monitored. */
 				close (ev->data.fd);
@@ -149,20 +155,16 @@ void handle_client_request(struct epoll_event *ev)
 		}
 		else 
 		{
-			buff[n] = '\0';
-			printf("Read: [%s]\n",  buff);
+			ri->buffer[ri->clientreadsz] = '\0';
+			printf("Read: [%s]\n",  ri->buffer);
 
 			// Concatenate the data to a value in a map with the socket id as the key
 			// concatval(ev->data.fd, buff)
 
-			// Also need to keep track of the length in the map
-			int buffsize = strlen(buff);
-
 			// If we find the end of message marker, respond
-			if(is_complete_request(buff))
+			if(is_complete_request(ri->buffer))
 			{
-				handle_response(ev->data.fd, buff, buffsize);
-				
+				handle_response(ev->data.fd, ri->buffer, ri->clientreadsz);
 			}
 
 		}
@@ -210,7 +212,10 @@ void handle_new_connection(int epollfd, struct epoll_event *ev)
 		perror ("epoll_ctl");
 		abort ();
 	}
-
+    request_info *ri = (request_info *) calloc(1, sizeof request_info);
+    ri->cfd = connfd;
+    ri->clientreadsz = 0;
+    RequestMap[connfd] = ri;
 }
 
 
