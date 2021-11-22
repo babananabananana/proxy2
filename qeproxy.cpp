@@ -83,6 +83,27 @@ int open_listenfd(char *port)
     return listenfd;
 }
 
+void modsocket(int epollfd, int connfd){
+    // It is OK to use a stack variable here. The struct is simply a way to package arguments
+    // The OS copies the struct values so it will be fine
+    struct epoll_event event;
+    event.data.fd = connfd;
+    event.events = EPOLLIN;
+    int s;
+
+    if (g_edge_triggered)
+    {
+        event.events = EPOLLIN | EPOLLET;
+    }
+
+    s = epoll_ctl (epollfd, EPOLL_CTL_ADD, connfd, &event);
+    if (s == -1)
+    {
+        perror ("epoll_ctl");
+        abort ();
+    }
+}
+
 int is_complete_request(char *buff)
 {
 	//printf("buff[%d]=[%c] bytesread = %d\n", n-1, buff[n-1], bytesread);
@@ -110,8 +131,7 @@ void echo_data(int fd, char *buff, int size)
 void handle_response(int fd, char *request, int size)
 {
 	echo_data(fd, request, size);
-//    RequestMap[]
-//SET SZ TO 0
+    RequestMap[fd]->clientreadz = 0;
 }
 
 void handle_client_request(struct epoll_event *ev)
@@ -124,14 +144,12 @@ void handle_client_request(struct epoll_event *ev)
 	 completely, as we are running in edge-triggered mode
 	 and won't get a notification again for the same data. 
 	 */
-      /////
     request_info* ri = RequestMap[ev->data.fd];
 	printf("Handling a client request\n");
 
 	int done = 0;
 	for(int i = 0; !done; i++)
 	{
-        ////
 		int n = read_data(ev->data.fd, &(ri->buffer[ri->clientreadsz]), MAXLINE-1);
 		ri->clientreadsz += n;
         if (!g_edge_triggered)
@@ -194,24 +212,9 @@ void handle_new_connection(int epollfd, struct epoll_event *ev)
 	flags |= O_NONBLOCK;
 	fcntl (connfd, F_SETFL, flags);
 
+    modsocket(epollfd, connfd);
 
-	// It is OK to use a stack variable here. The struct is simply a way to package arguments 
-	// The OS copies the struct values so it will be fine
-	struct epoll_event event;
-	event.data.fd = connfd;
-	event.events = EPOLLIN;
 
-	if (g_edge_triggered)
-	{
-		event.events = EPOLLIN | EPOLLET;  
-	}
-
-	s = epoll_ctl (epollfd, EPOLL_CTL_ADD, connfd, &event);
-	if (s == -1)
-	{
-		perror ("epoll_ctl");
-		abort ();
-	}
     request_info *ri = (request_info *) calloc(1, sizeof (request_info));
     ri->cfd = connfd;
     ri->clientreadsz = 0;
