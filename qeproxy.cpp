@@ -125,7 +125,7 @@ void handle_client_request(struct epoll_event *ev)
 	 and won't get a notification again for the same data. 
 	 */
       /////
-      request_info* ri = RequestMap(ev->data, fd);
+      request_info* ri = RequestMap(ev->data, ev->data.fd);
 	printf("Handling a client request\n");
 
 	int done = 0;
@@ -212,7 +212,7 @@ void handle_new_connection(int epollfd, struct epoll_event *ev)
 		perror ("epoll_ctl");
 		abort ();
 	}
-    request_info *ri = (request_info *) calloc(1, sizeof request_info);
+    request_info *ri = (request_info *) calloc(1, sizeof (request_info));
     ri->cfd = connfd;
     ri->clientreadsz = 0;
     RequestMap[connfd] = ri;
