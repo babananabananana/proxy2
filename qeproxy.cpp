@@ -131,7 +131,7 @@ void echo_data(int fd, char *buff, int size)
 void handle_response(int fd, char *request, int size)
 {
 	echo_data(fd, request, size);
-    RequestMap[fd]->clientreadz = 0;
+    RequestMap[fd]->clientreadsz = 0;
 }
 
 void handle_client_request(struct epoll_event *ev)
