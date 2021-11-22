@@ -86,10 +86,13 @@ int open_listenfd(char *port)
 void modsocket(int epollfd, int connfd){
     // It is OK to use a stack variable here. The struct is simply a way to package arguments
     // The OS copies the struct values so it will be fine
+    int s;
+
+    request_info *ri = RequestMap[connfd];
+
     struct epoll_event event;
     event.data.fd = connfd;
     event.events = EPOLLIN;
-    int s;
 
     if (g_edge_triggered)
     {
@@ -212,13 +215,15 @@ void handle_new_connection(int epollfd, struct epoll_event *ev)
 	flags |= O_NONBLOCK;
 	fcntl (connfd, F_SETFL, flags);
 
-    modsocket(epollfd, connfd);
-
 
     request_info *ri = (request_info *) calloc(1, sizeof (request_info));
     ri->cfd = connfd;
     ri->clientreadsz = 0;
+    ri->reqState = READ_REQUEST;
     RequestMap[connfd] = ri;
+
+    modsocket(epollfd, connfd);
+
 }
 
 
