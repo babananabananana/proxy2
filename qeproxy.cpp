@@ -299,7 +299,8 @@ int main(int argc, char **argv)
         {
         
             /* Error handling */
-            if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN)))
+            if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) ||
+                    !((events[i].events & EPOLLIN) || (events[i].events & EPOLLOUT)))
             {
                 /* An error has occured on this fd, or the socket is not
                  ready for reading (why were we notified then?) */
