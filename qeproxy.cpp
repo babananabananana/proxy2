@@ -114,7 +114,7 @@ void modsocket(int epollfd, int connfd){
     }else{
         s = epoll_ctl (epollfd, EPOLL_CTL_MOD, connfd, &event);
     }
-    
+
     if (s == -1)
     {
         perror ("epoll_ctl");
@@ -146,13 +146,16 @@ void echo_data(int fd, char *buff, int size)
 	write(fd, buff, size+1);
 }
 
-void handle_response(int fd, char *request, int size)
+//void handle_response(int fd, char *request, int size)
+void handle_response(int epollfd, struct epoll_event *ev)
 {
-	echo_data(fd, request, size);
-    RequestMap[fd]->clientreadsz = 0;
+    request_info *ri = RequestMap[ev->data.fd];
+
+	echo_data(ev->data.fd, ri->buffer, ri->clientreadsz);
+    ri->clientreadsz = 0;
 }
 
-void handle_client_request(struct epoll_event *ev)
+void handle_client_request(int epollfd, struct epoll_event *ev)
 {
 	char buff[MAXLINE];
 	int n, bytesread;
@@ -200,7 +203,9 @@ void handle_client_request(struct epoll_event *ev)
 			// If we find the end of message marker, respond
 			if(is_complete_request(ri->buffer))
 			{
-				handle_response(ev->data.fd, ri->buffer, ri->clientreadsz);
+                ri->reqState = SEND_RESPONSE; ////THIS MUST CHANGE WHEN CONNECTING WITH TINY TO SEND_REQUEST
+                modsocket(epollfd, ev->data.fd);
+//				handle_response(ev->data.fd, ri->buffer, ri->clientreadsz);
 			}
 
 		}
@@ -310,7 +315,11 @@ int main(int argc, char **argv)
             }
             else if (events[i].events & EPOLLIN)
             {
-                handle_client_request(&events[i]);
+                handle_client_request(epollfd, &events[i]);
+            }
+            else if (events[i].events & EPOLLOUT){
+//                handle_response(ev->data.fd, ri->buffer, ri->clientreadsz);
+                handle_response(epollfd, &events[i]);
             }
             else
             {
