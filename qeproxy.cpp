@@ -22,6 +22,12 @@ using namespace std;
 #define ENDMESSAGE '\n'
 #define MAXMESSAGE 4000
 
+#define READ_REQUEST 0
+#define SEND_REQEUST 1
+#define READ_RESPONSE 2
+#define SEND_RESPONSE 3
+
+
 typedef struct{
     int cfd; //the socket corresponding to the requesting client
     int tft; //the socket corresponding to the connection to the Web server
@@ -92,14 +98,23 @@ void modsocket(int epollfd, int connfd){
 
     struct epoll_event event;
     event.data.fd = connfd;
-    event.events = EPOLLIN;
+
+    if(ri->reqState == READ_REQUEST || ri->reqState == READ_RESPONSE){
+        event.events = EPOLLIN;
+    }else
+        event.events = EPOLLOUT;
 
     if (g_edge_triggered)
     {
-        event.events = EPOLLIN | EPOLLET;
+        event.events |= EPOLLET;
     }
 
-    s = epoll_ctl (epollfd, EPOLL_CTL_ADD, connfd, &event);
+    if(ri->reqState == READ_REQUEST){
+        s = epoll_ctl (epollfd, EPOLL_CTL_ADD, connfd, &event);
+    }else{
+        s = epoll_ctl (epollfd, EPOLL_CTL_MOD, connfd, &event);
+    }
+    
     if (s == -1)
     {
         perror ("epoll_ctl");
